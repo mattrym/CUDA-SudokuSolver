@@ -151,7 +151,14 @@ copy "$(CudaToolkitBinDir)\cudart*.dll" "$(OutDir)"</Command>
     </CudaCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <CudaCompile Include="kernel.cu" />
+    <CudaCompile Include="board_io.cu" />
+    <CudaCompile Include="main.cu" />
+    <CudaCompile Include="solver.cu" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="board_io.cuh" />
+    <ClInclude Include="solver.cuh" />
+    <ClInclude Include="sudoku.cuh" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
