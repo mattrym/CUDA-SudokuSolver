@@ -9,5 +9,11 @@
     <ClInclude Include="board_io.h" />
     <ClInclude Include="sudoku.h" />
     <ClInclude Include="gpu_solver.h" />
+    <ClInclude Include="cpu_solver.h" />
+    <ClInclude Include="board_stack.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <ClCompile Include="cpu_solver.cpp" />
+    <ClCompile Include="board_stack.cpp" />
   </ItemGroup>
 </Project>

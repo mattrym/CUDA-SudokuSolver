@@ -34,12 +34,11 @@ int read_char(FILE* file, char* mem, int row, int col)
 int load_board(char* filename, BOARD board)
 {
 	FILE* file;
-	errno_t err;
 	int row = 0, col = 0;
 
-	if ((err = fopen_s(&file, filename, "r")) != 0)
+	if (fopen_s(&file, filename, "r") != 0)
 	{
-		fprintf(stderr, "Error while opening a file %s: %s\n", filename, strerror(err));
+		fprintf(stderr, "Error while opening a file: %s\n", filename);
 		exit(1);
 	}
 

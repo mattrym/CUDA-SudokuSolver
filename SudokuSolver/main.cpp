@@ -1,15 +1,33 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <windows.h>
 
 #include "board_io.h"
 #include "sudoku.h"
+#include "cpu_solver.h"
 #include "gpu_solver.h"
+
+void measure_time(void(solve_fun)(BOARD, BOARD), BOARD input_board, BOARD output_board)
+{
+	LARGE_INTEGER freq, start, end;
+	double elapsed_time;
+
+	QueryPerformanceFrequency(&freq);
+
+	QueryPerformanceCounter(&start);
+	solve_fun(input_board, output_board);
+	QueryPerformanceCounter(&end);
+
+	elapsed_time = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
+
+	print_board(stdout, output_board);
+	printf("\nTime: %.7g us\n", elapsed_time);
+}
 
 int main(int argc, char* argv[])
 {
-	int iterations;
 	char* filename;
-	BOARD input_board, output_board;
+	BOARD input_board, cpu_output_board, gpu_output_board;
 
 	if (argc != 2)
 	{
@@ -18,17 +36,24 @@ int main(int argc, char* argv[])
 	}
 	filename = argv[1];
 
-	input_board = (BOARD)calloc(N * N, sizeof(__int8));
+	input_board = (BOARD)calloc(N * N, sizeof(CELL));
 	if (!input_board)
 	{
 		perror("Error while allocating memory for input board");
 		exit(1);
 	}
 
-	output_board = (BOARD)calloc(N * N, sizeof(__int8));
-	if (!output_board)
+	cpu_output_board = (BOARD)calloc(N * N, sizeof(CELL));
+	if (!cpu_output_board)
 	{
-		perror("Error while allocating memory for output board");
+		perror("Error while allocating memory for GPU output board");
+		exit(1);
+	}
+
+	gpu_output_board = (BOARD)calloc(N * N, sizeof(CELL));
+	if (!gpu_output_board)
+	{
+		perror("Error while allocating memory for GPU output board");
 		exit(1);
 	}
 
@@ -38,14 +63,21 @@ int main(int argc, char* argv[])
 		exit(1);
 	}
 
-	printf("Input board:\n");
+	printf("------INPUT------\n");
 	print_board(stdout, input_board);
+	printf("-----------------\n\n");
 
-	iterations = 0;
-	run_solve(input_board, output_board);
+	printf("-------CPU-------\n");
+	measure_time(solve_cpu, input_board, cpu_output_board);
+	printf("-----------------\n\n");
 
-	printf("Output board:\n");
-	print_board(stdout, output_board);
+	printf("-------GPU-------\n");
+	measure_time(solve_gpu, input_board, gpu_output_board);
+	printf("-----------------\n\n");
+
+	free(input_board);
+	free(cpu_output_board);
+	free(gpu_output_board);
 
 	return 0;
 }

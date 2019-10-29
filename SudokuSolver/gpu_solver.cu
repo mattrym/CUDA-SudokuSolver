@@ -8,28 +8,37 @@
 #include "sudoku.h"
 #include "gpu_solver.h"
 
+inline void check_cuda_error(cudaError_t cuda_status, const char* file, int line)
+{
+	if (cuda_status != cudaSuccess)
+	{
+		fprintf(stderr, "CUDA error (%s:%d): %s", file, line, cudaGetErrorString(cuda_status));
+		exit(EXIT_FAILURE);
+	}
+}
+#define CUDA_SAFE(cuda_status) check_cuda_error(cuda_status, __FILE__, __LINE__)
 
 __device__ int cell_index(const int cell)
 {
 	int row, col;
-	int mask_type, mask_index;
+	int mask_type, mask_offset;
 
 	mask_type = threadIdx.x / N;
-	mask_index = threadIdx.x % N;
+	mask_offset = threadIdx.x % N;
 
 	switch (mask_type)
 	{
 	case ROW_MASK:
-		row = mask_index;
+		row = mask_offset;
 		col = cell;
 		break;
 	case COL_MASK:
 		row = cell;
-		col = mask_index;
+		col = mask_offset;
 		break;
 	case SUB_MASK:
-		row = (mask_index / n) * n + cell / n;
-		col = (mask_index % n) * n + cell % n;
+		row = (mask_offset / n) * n + cell / n;
+		col = (mask_offset % n) * n + cell % n;
 		break;
 	}
 
@@ -62,7 +71,7 @@ __device__ void find_candidates(BOARD board, MASK* masks, CANDIDATES* candidates
 	int row, sub;
 	int col, lcol, ucol;
 	int cell, digit;
-	__int16 row_mask, col_mask, sub_mask;
+	MASK row_mask, col_mask, sub_mask;
 
 	row = threadIdx.x / n;
 	sub = (threadIdx.x / N) * n + threadIdx.x % n;
@@ -204,21 +213,21 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 		__syncthreads();
 	} while (!flags.error && !flags.success && flags.progress);
 
+	if (flags.error)
+	{
+		if (!threadIdx.x)
+		{
+			block_status[blockIdx.x] = IDLE;
+		}
+		return;
+	}
+
 	if (flags.success)
 	{
 		if (!threadIdx.x)
 		{
 			block_status[BLOCKS] = SUCCESS;
 			memcpy(last_board, board, BOARD_SIZE * sizeof(CELL));
-		}
-		return;
-	}
-
-	if (flags.error)
-	{
-		if (!threadIdx.x)
-		{
-			block_status[blockIdx.x] = IDLE;
 		}
 		return;
 	}
@@ -232,73 +241,34 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 	}
 }
 
-void run_solve(BOARD input_board, BOARD output_board)
+void solve_gpu(const BOARD input_board, BOARD output_board)
 {
 	BOARDS boards;
 	BLOCK_STATUS* block_status;
+	BLOCK_STATUS last_block_status;
 
-	cudaError_t cuda_status;
-	int iterations, result;
+	int it;
 
-	cuda_status = cudaMalloc((void**)&block_status, (BLOCKS + 1) * sizeof(BLOCK_STATUS));
-	if (cuda_status != cudaSuccess) {
-		fprintf(stdout, "cudaMalloc failed!");
-		goto Error;
-	}
+	CUDA_SAFE(cudaMalloc((void**)&block_status, (BLOCKS + 1) * sizeof(BLOCK_STATUS)));
+	CUDA_SAFE(cudaMemset(block_status, 1, 1));
 
-	cuda_status = cudaMalloc((void**)&boards, (BLOCKS + 1) * BOARD_SIZE * sizeof(CELL));
-	if (cuda_status != cudaSuccess) {
-		fprintf(stdout, "cudaMalloc failed!");
-		goto Error;
-	}
+	CUDA_SAFE(cudaMalloc((void**)&boards, (BLOCKS + 1) * BOARD_SIZE * sizeof(CELL)));
+	CUDA_SAFE(cudaMemcpy(boards, input_board, BOARD_SIZE * sizeof(CELL), cudaMemcpyHostToDevice));
 
-	cuda_status = cudaMemset(block_status, 1, 1);
-	if (cuda_status != cudaSuccess) {
-		fprintf(stdout, "cudaMemset failed!");
-		goto Error;
-	}
-
-	cuda_status = cudaMemcpy(boards, input_board, BOARD_SIZE * sizeof(CELL), cudaMemcpyHostToDevice);
-	if (cuda_status != cudaSuccess) {
-		fprintf(stdout, "cudaMemcpy failed!");
-		goto Error;
-	}
-
-	for (iterations = 0; iterations < ITERATIONS; iterations++)
+	for (it = 0; it < ITERATIONS; ++it)
 	{
 		solve_kernel<<<BLOCKS, THREADS>>>(boards, block_status);
+		CUDA_SAFE(cudaGetLastError());
+		CUDA_SAFE(cudaDeviceSynchronize());
 
-		cuda_status = cudaGetLastError();
-		if (cuda_status != cudaSuccess) {
-			fprintf(stdout, "solve launch failed: %s\n", cudaGetErrorString(cuda_status));
-			goto Error;
-		}
-
-		cuda_status = cudaDeviceSynchronize();
-		if (cuda_status != cudaSuccess) {
-			fprintf(stdout, "cudaDeviceSynchronize returned error code %d after launching solve!\n", cuda_status);
-			goto Error;
-		}
-
-		cuda_status = cudaMemcpy(&result, block_status + BLOCKS, sizeof(BLOCK_STATUS), cudaMemcpyDeviceToHost);
-		if (cuda_status != cudaSuccess) {
-			fprintf(stdout, "cudaMemcpy failed!");
-			goto Error;
-		}
-
-		if (result == SUCCESS)
+		CUDA_SAFE(cudaMemcpy(&last_block_status, block_status + BLOCKS, sizeof(BLOCK_STATUS), cudaMemcpyDeviceToHost));
+		if (last_block_status == SUCCESS)
 		{
-			cuda_status = cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(CELL), cudaMemcpyDeviceToHost);
-			if (cuda_status != cudaSuccess) {
-				fprintf(stdout, "cudaMemcpy failed!");
-				goto Error;
-			}
-
+			CUDA_SAFE(cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(CELL), cudaMemcpyDeviceToHost));
 			break;
 		}
 	}
 
-Error:
 	cudaFree(boards);
 	cudaFree(block_status);
 }
