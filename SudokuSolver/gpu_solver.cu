@@ -249,6 +249,8 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 
 	int it;
 
+	CUDA_SAFE(cudaSetDevice(0));
+
 	CUDA_SAFE(cudaMalloc((void**)&block_status, (BLOCKS + 1) * sizeof(BLOCK_STATUS)));
 	CUDA_SAFE(cudaMemset(block_status, 1, 1));
 
@@ -271,4 +273,6 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 
 	cudaFree(boards);
 	cudaFree(block_status);
+
+	CUDA_SAFE(cudaDeviceReset());
 }
