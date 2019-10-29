@@ -1,7 +1,7 @@
-#ifndef SOLVER_CUH_
-#define SOLVER_CUH_
+#include "sudoku.h"
 
-#include <cuda_runtime.h>
+#ifndef GPU_SOLVER_H_
+#define GPU_SOLVER_H_
 
 #define BLOCKS 65535
 #define THREADS 27
@@ -30,6 +30,6 @@ typedef struct {
 	BLOCK_FLAG error;
 } BLOCK_FLAGS;
 
-cudaError_t run_solve(BOARD, BOARD, int*);
+void run_solve(BOARD, BOARD);
 
 #endif

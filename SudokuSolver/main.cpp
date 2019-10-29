@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "sudoku.cuh"
-#include "solver.cuh"
-#include "board_io.cuh"
+#include "board_io.h"
+#include "sudoku.h"
+#include "gpu_solver.h"
 
 int main(int argc, char* argv[])
 {
@@ -39,13 +39,13 @@ int main(int argc, char* argv[])
 	}
 
 	printf("Input board:\n");
-	print_board(input_board);
+	print_board(stdout, input_board);
 
 	iterations = 0;
-	run_solve(input_board, output_board, &iterations);
+	run_solve(input_board, output_board);
 
 	printf("Output board:\n");
-	print_board(output_board);
+	print_board(stdout, output_board);
 
 	return 0;
 }

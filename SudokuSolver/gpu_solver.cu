@@ -1,14 +1,15 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "cuda_runtime_api.h"
-#include "device_launch_parameters.h"
+#include <cuda_runtime.h>
+#include <cuda_runtime_api.h>
+#include <device_launch_parameters.h>
 
-#include "sudoku.cuh"
-#include "solver.cuh"
+#include "sudoku.h"
+#include "gpu_solver.h"
 
 
-__device__ int cell_index(int cell)
+__device__ int cell_index(const int cell)
 {
 	int row, col;
 	int mask_type, mask_index;
@@ -35,7 +36,7 @@ __device__ int cell_index(int cell)
 	return row * N + col;
 }
 
-__device__ void calculate_masks(BOARD board, MASK* masks, BLOCK_FLAGS* flags)
+__device__ void calculate_masks(const BOARD board, MASK* masks, BLOCK_FLAGS* flags)
 {
 	int cell, cell_i, value, value_mask;
 
@@ -170,7 +171,7 @@ __device__ void fork_board(BOARD boards, int* block_flags, CANDIDATES candidates
 	}
 }
 
-__global__ void solve(BOARDS boards, BLOCK_STATUS* block_status)
+__global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 {
 	__shared__ MASK masks[N * n];
 	__shared__ CANDIDATES candidates[BOARD_SIZE];
@@ -231,7 +232,7 @@ __global__ void solve(BOARDS boards, BLOCK_STATUS* block_status)
 	}
 }
 
-cudaError_t run_solve(BOARD input_board, BOARD output_board, int* iterations1)
+void run_solve(BOARD input_board, BOARD output_board)
 {
 	BOARDS boards;
 	BLOCK_STATUS* block_status;
@@ -265,7 +266,7 @@ cudaError_t run_solve(BOARD input_board, BOARD output_board, int* iterations1)
 
 	for (iterations = 0; iterations < ITERATIONS; iterations++)
 	{
-		solve <<<BLOCKS, THREADS>>>(boards, block_status);
+		solve_kernel<<<BLOCKS, THREADS>>>(boards, block_status);
 
 		cuda_status = cudaGetLastError();
 		if (cuda_status != cudaSuccess) {
@@ -300,5 +301,4 @@ cudaError_t run_solve(BOARD input_board, BOARD output_board, int* iterations1)
 Error:
 	cudaFree(boards);
 	cudaFree(block_status);
-	return cuda_status;
 }
