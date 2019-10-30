@@ -20,6 +20,7 @@ int read_char(FILE* file, char* mem, int row, int col)
 		}
 
 		perror("Error while reading file");
+		fclose(file);
 		exit(1);
 	}
 
@@ -46,6 +47,7 @@ int load_board(char* filename, BOARD board)
 	{
 		if (read_char(file, &(board[row * N + col]), row, col))
 		{
+			fclose(file);
 			return 1;
 		}
 
@@ -56,6 +58,7 @@ int load_board(char* filename, BOARD board)
 	if (ferror(file))
 	{
 		perror("Error while reading a file");
+		fclose(file);
 		exit(1);
 	}
 

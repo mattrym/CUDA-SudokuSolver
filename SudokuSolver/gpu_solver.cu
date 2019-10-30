@@ -137,16 +137,14 @@ __device__ void find_fork_cell(BOARD board, CANDIDATES* candidates, int* min_for
 	}
 }
 
-__device__ void fork_board(BOARD boards, int* block_flags, CANDIDATES candidates, int fork_cell)
+__device__ void fork_board(BOARD boards, int* block_flags, BOARD board, CANDIDATES candidates, int fork_cell)
 {
 	int digit, forks, block;
 	int block_id;
-	BOARD board, forked_board;
+	BOARD forked_board;
 
 	forks = 0;
 	block = 0;
-
-	board = boards + blockIdx.x * BOARD_SIZE;
 
 	for (digit = 0; digit < N; ++digit)
 	{
@@ -161,9 +159,9 @@ __device__ void fork_board(BOARD boards, int* block_flags, CANDIDATES candidates
 
 					if (block_flags[block] == block_id)
 					{
-						forked_board = boards + block * BOARD_SIZE * sizeof(CELL);
+						forked_board = boards + block * BOARD_SIZE;
 
-						memcpy(forked_board, board, BOARD_SIZE * sizeof(CELL));
+						memcpy(forked_board, board, BOARD_SIZE);
 						forked_board[fork_cell] = digit + 1;
 						block_flags[block] = BUSY;
 
@@ -174,7 +172,10 @@ __device__ void fork_board(BOARD boards, int* block_flags, CANDIDATES candidates
 			}
 			else
 			{
-				board[fork_cell] = digit + 1;
+				forked_board = boards + blockIdx.x * BOARD_SIZE;
+
+				memcpy(forked_board, board, BOARD_SIZE);
+				forked_board[fork_cell] = digit + 1;
 			}
 		}
 	}
@@ -189,18 +190,23 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 	__shared__ int min_forks;
 	__shared__ int fork_cell;
 
-	BOARD board, last_board;
-
-	board = boards + blockIdx.x * BOARD_SIZE;
-	last_board = boards + BLOCKS * BOARD_SIZE;
-	
-	min_forks = 9;
-	fork_cell = BOARD_SIZE;
+	__shared__ CELL board[BOARD_SIZE];
+	BOARD last_board;
 
 	if (block_status[blockIdx.x] != BUSY)
 	{
 		return;
 	}
+
+	if (!threadIdx.x)
+	{
+		min_forks = 9;
+		fork_cell = BOARD_SIZE;
+
+		memcpy(board, boards + blockIdx.x * BOARD_SIZE, BOARD_SIZE);
+		last_board = boards + BLOCKS * BOARD_SIZE;
+	}
+	__syncthreads();
 
 	do
 	{
@@ -237,7 +243,7 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 
 	if (!threadIdx.x)
 	{
-		fork_board(boards, block_status, candidates[fork_cell], fork_cell);
+		fork_board(boards, block_status, board, candidates[fork_cell], fork_cell);
 	}
 }
 
