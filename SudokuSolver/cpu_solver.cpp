@@ -6,18 +6,18 @@
 
 #include "cpu_solver.h"
 
-BOARD clone_board(BOARD board)
+board_t clone_board(board_t board)
 {
-	BOARD new_board;
+	board_t new_board;
 
-	new_board = (BOARD)calloc(BOARD_SIZE, sizeof(CELL));
+	new_board = (board_t)calloc(BOARD_SIZE, sizeof(cell_t));
 	if (!new_board)
 	{
 		perror("Error while allocating memory for stacked board");
 		exit(EXIT_FAILURE);
 	}
 
-	return (BOARD)memcpy(new_board, board, BOARD_SIZE);
+	return (board_t)memcpy(new_board, board, BOARD_SIZE);
 }
 
 int get_cell_index(int mask_index, const int cell)
@@ -47,7 +47,7 @@ int get_cell_index(int mask_index, const int cell)
 	return row * N + col;
 }
 
-void calculate_masks(const BOARD board, MASK* masks, FLAGS* flags)
+void calculate_masks(const board_t board, mask_t* masks, flags_t* flags)
 {
 	int cell, cell_index;
 	int value, value_mask;
@@ -73,13 +73,13 @@ void calculate_masks(const BOARD board, MASK* masks, FLAGS* flags)
 	}
 }
 
-void find_candidates(BOARD board, MASK* masks, CANDIDATES* candidates, FLAGS* flags)
+void find_candidates(board_t board, mask_t* masks, candidates_t* candidates, flags_t* flags)
 {
 	int row, col, sub;
 	int cell, digit;
 	int progress, success;
 
-	MASK row_mask, col_mask, sub_mask;
+	mask_t row_mask, col_mask, sub_mask;
 
 	progress = 0;
 	success = 1;
@@ -115,7 +115,7 @@ void find_candidates(BOARD board, MASK* masks, CANDIDATES* candidates, FLAGS* fl
 	}
 }
 
-int find_fork_cell(BOARD board, CANDIDATES* candidates)
+int find_fork_cell(board_t board, candidates_t* candidates)
 {
 	int digit, cell, fork_cell;
 	int forks, min_forks;
@@ -144,10 +144,10 @@ int find_fork_cell(BOARD board, CANDIDATES* candidates)
 	return fork_cell;
 }
 
-void fork_board(STACK* stack, BOARD board, CANDIDATES candidates, int fork_cell)
+void fork_board(stack_t* stack, board_t board, candidates_t candidates, int fork_cell)
 {
 	int digit;
-	BOARD forked_board;
+	board_t forked_board;
 
 	for (digit = N - 1; digit >= 0; --digit)
 	{
@@ -160,14 +160,14 @@ void fork_board(STACK* stack, BOARD board, CANDIDATES candidates, int fork_cell)
 	}
 }
 
-void solve_cpu(BOARD input_board, BOARD output_board)
+void solve_cpu(board_t input_board, board_t output_board)
 {
-	STACK stack;
-	FLAGS flags;
-	BOARD curr_board;
+	stack_t stack;
+	flags_t flags;
+	board_t curr_board;
 
-	MASK masks[N * n];
-	CANDIDATES candidates[BOARD_SIZE];
+	mask_t masks[N * n];
+	candidates_t candidates[BOARD_SIZE];
 
 	int fork_cell;
 

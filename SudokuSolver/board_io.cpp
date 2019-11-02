@@ -32,7 +32,7 @@ int read_char(FILE* file, char* mem, int row, int col)
 	return 1;
 }
 
-int load_board(char* filename, BOARD board)
+int load_board(char* filename, board_t board)
 {
 	FILE* file;
 	int row = 0, col = 0;
@@ -66,7 +66,7 @@ int load_board(char* filename, BOARD board)
 	return 0;
 }
 
-void print_board(FILE* fd, BOARD board)
+void print_board(FILE* fd, board_t board)
 {
 	int row, col;
 	int value;

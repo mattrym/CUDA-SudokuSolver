@@ -3,16 +3,16 @@
 #ifndef BOARD_STACK_H_
 #define BOARD_STACK_H_
 
-typedef struct STACK_NODE {
-	BOARD board;
-	STACK_NODE* next;
-} STACK_NODE;
+typedef struct stack_node_t {
+	board_t board;
+	stack_node_t* next;
+} stack_node_t;
 
-typedef STACK_NODE* STACK;
+typedef stack_node_t* stack_t;
 
-int stack_empty(STACK node);
-void stack_push(STACK* stack, BOARD board);
-void stack_pop(STACK* stack, BOARD* board);
-void stack_free(STACK* stack);
+int stack_empty(stack_t node);
+void stack_push(stack_t* stack, board_t board);
+void stack_pop(stack_t* stack, board_t* board);
+void stack_free(stack_t* stack);
 
 #endif

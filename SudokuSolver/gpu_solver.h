@@ -11,15 +11,15 @@
 #define BUSY 1
 #define SUCCESS 2
 
-typedef char BLOCK_FLAG;
-typedef int BLOCK_STATUS;
+typedef char block_flag_t;
+typedef int block_status_t;
 
 typedef struct {
-	BLOCK_FLAG progress;
-	BLOCK_FLAG success;
-	BLOCK_FLAG error;
-} BLOCK_FLAGS;
+	block_flag_t progress;
+	block_flag_t success;
+	block_flag_t error;
+} block_flags_t;
 
-void solve_gpu(BOARD, BOARD);
+void solve_gpu(board_t, board_t);
 
 #endif

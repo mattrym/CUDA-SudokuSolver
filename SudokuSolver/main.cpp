@@ -7,7 +7,7 @@
 #include "cpu_solver.h"
 #include "gpu_solver.h"
 
-void measure_time(void(solve_fun)(BOARD, BOARD), BOARD input_board, BOARD output_board)
+void measure_time(void(solve_fun)(board_t, board_t), board_t input_board, board_t output_board)
 {
 	LARGE_INTEGER freq, start, end;
 	double elapsed_time;
@@ -27,7 +27,7 @@ void measure_time(void(solve_fun)(BOARD, BOARD), BOARD input_board, BOARD output
 int main(int argc, char* argv[])
 {
 	char* filename;
-	BOARD input_board, cpu_output_board, gpu_output_board;
+	board_t input_board, cpu_output_board, gpu_output_board;
 
 	if (argc != 2)
 	{
@@ -36,21 +36,21 @@ int main(int argc, char* argv[])
 	}
 	filename = argv[1];
 
-	input_board = (BOARD)calloc(N * N, sizeof(CELL));
+	input_board = (board_t)calloc(BOARD_SIZE, sizeof(cell_t));
 	if (!input_board)
 	{
 		perror("Error while allocating memory for input board");
 		exit(1);
 	}
 
-	cpu_output_board = (BOARD)calloc(N * N, sizeof(CELL));
+	cpu_output_board = (board_t)calloc(BOARD_SIZE, sizeof(cell_t));
 	if (!cpu_output_board)
 	{
 		perror("Error while allocating memory for GPU output board");
 		exit(1);
 	}
 
-	gpu_output_board = (BOARD)calloc(N * N, sizeof(CELL));
+	gpu_output_board = (board_t)calloc(BOARD_SIZE, sizeof(cell_t));
 	if (!gpu_output_board)
 	{
 		perror("Error while allocating memory for GPU output board");

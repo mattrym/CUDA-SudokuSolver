@@ -45,7 +45,7 @@ __device__ int cell_index(const int cell)
 	return row * N + col;
 }
 
-__device__ void calculate_masks(const BOARD board, MASK* masks, BLOCK_FLAGS* flags)
+__device__ void calculate_masks(const board_t board, mask_t* masks, block_flags_t* flags)
 {
 	int cell, cell_i, value, value_mask;
 
@@ -66,12 +66,12 @@ __device__ void calculate_masks(const BOARD board, MASK* masks, BLOCK_FLAGS* fla
 	}
 }
 
-__device__ void find_candidates(BOARD board, MASK* masks, CANDIDATES* candidates, BLOCK_FLAGS* flags)
+__device__ void find_candidates(const boards_t board, const mask_t* masks, candidates_t* candidates, block_flags_t* flags)
 {
 	int row, sub;
 	int col, lcol, ucol;
 	int cell, digit;
-	MASK row_mask, col_mask, sub_mask;
+	mask_t row_mask, col_mask, sub_mask;
 
 	row = threadIdx.x / n;
 	sub = (threadIdx.x / N) * n + threadIdx.x % n;
@@ -107,7 +107,7 @@ __device__ void find_candidates(BOARD board, MASK* masks, CANDIDATES* candidates
 	}
 }
 
-__device__ void find_fork_cell(BOARD board, CANDIDATES* candidates, int* min_forks, int* fork_cell)
+__device__ void find_fork_cell(const board_t board, const candidates_t* candidates, int* min_forks, int* fork_cell)
 {
 	int digit, cell, offset;
 	int forks[n];
@@ -137,11 +137,11 @@ __device__ void find_fork_cell(BOARD board, CANDIDATES* candidates, int* min_for
 	}
 }
 
-__device__ void fork_board(BOARD boards, int* block_flags, BOARD board, CANDIDATES candidates, int fork_cell)
+__device__ void fork_board(const board_t board, const candidates_t candidates, const int fork_cell, boards_t boards, int* block_flags)
 {
 	int digit, forks, block;
 	int block_id;
-	BOARD forked_board;
+	board_t forked_board;
 
 	forks = 0;
 	block = 0;
@@ -181,17 +181,17 @@ __device__ void fork_board(BOARD boards, int* block_flags, BOARD board, CANDIDAT
 	}
 }
 
-__global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
+__global__ void solve_kernel(boards_t boards, block_status_t* block_status)
 {
-	__shared__ MASK masks[N * n];
-	__shared__ CANDIDATES candidates[BOARD_SIZE];
-	__shared__ BLOCK_FLAGS flags;
+	__shared__ mask_t masks[N * n];
+	__shared__ candidates_t candidates[BOARD_SIZE];
+	__shared__ block_flags_t flags;
 
 	__shared__ int min_forks;
 	__shared__ int fork_cell;
 
-	__shared__ CELL board[BOARD_SIZE];
-	BOARD last_board;
+	__shared__ cell_t board[BOARD_SIZE];
+	board_t last_board;
 
 	if (block_status[blockIdx.x] != BUSY)
 	{
@@ -233,7 +233,7 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 		if (!threadIdx.x)
 		{
 			block_status[BLOCKS] = SUCCESS;
-			memcpy(last_board, board, BOARD_SIZE * sizeof(CELL));
+			memcpy(last_board, board, BOARD_SIZE * sizeof(cell_t));
 		}
 		return;
 	}
@@ -243,15 +243,15 @@ __global__ void solve_kernel(BOARDS boards, BLOCK_STATUS* block_status)
 
 	if (!threadIdx.x)
 	{
-		fork_board(boards, block_status, board, candidates[fork_cell], fork_cell);
+		fork_board(board, candidates[fork_cell], fork_cell, boards, block_status);
 	}
 }
 
-void solve_gpu(const BOARD input_board, BOARD output_board)
+void solve_gpu(const board_t input_board, board_t output_board)
 {
-	BOARDS boards;
-	BLOCK_STATUS* block_status;
-	BLOCK_STATUS last_block_status;
+	boards_t boards;
+	block_status_t* block_status;
+	block_status_t last_block_status;
 
 	int it;
 	float elapsed_time, total_elapsed_time;
@@ -259,11 +259,11 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 
 	CUDA_SAFE(cudaSetDevice(0));
 
-	CUDA_SAFE(cudaMalloc((void**)&block_status, (BLOCKS + 1) * sizeof(BLOCK_STATUS)));
+	CUDA_SAFE(cudaMalloc((void**)&block_status, (BLOCKS + 1) * sizeof(block_status_t)));
 	CUDA_SAFE(cudaMemset(block_status, 1, 1));
 
-	CUDA_SAFE(cudaMalloc((void**)&boards, (BLOCKS + 1) * BOARD_SIZE * sizeof(CELL)));
-	CUDA_SAFE(cudaMemcpy(boards, input_board, BOARD_SIZE * sizeof(CELL), cudaMemcpyHostToDevice));
+	CUDA_SAFE(cudaMalloc((void**)&boards, (BLOCKS + 1) * BOARD_SIZE * sizeof(cell_t)));
+	CUDA_SAFE(cudaMemcpy(boards, input_board, BOARD_SIZE * sizeof(cell_t), cudaMemcpyHostToDevice));
 
 	CUDA_SAFE(cudaEventCreate(&t_start));
 	CUDA_SAFE(cudaEventCreate(&t_stop));
@@ -282,7 +282,7 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 
 		total_elapsed_time += elapsed_time;
 
-		CUDA_SAFE(cudaMemcpy(&last_block_status, block_status + BLOCKS, sizeof(BLOCK_STATUS), cudaMemcpyDeviceToHost));
+		CUDA_SAFE(cudaMemcpy(&last_block_status, block_status + BLOCKS, sizeof(block_status_t), cudaMemcpyDeviceToHost));
 		if (last_block_status == SUCCESS)
 		{
 			break;
@@ -291,7 +291,7 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 
 	printf("CUDA time: %.4f ms\n", elapsed_time);
 
-	CUDA_SAFE(cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(CELL), cudaMemcpyDeviceToHost));
+	CUDA_SAFE(cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(cell_t), cudaMemcpyDeviceToHost));
 
 	CUDA_SAFE(cudaEventDestroy(t_start));
 	CUDA_SAFE(cudaEventDestroy(t_stop));

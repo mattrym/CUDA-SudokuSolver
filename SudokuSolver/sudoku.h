@@ -11,11 +11,11 @@
 
 #define FULL_MASK 511
 
-typedef __int8 CELL;
-typedef CELL* BOARD;
+typedef __int8 cell_t;
+typedef cell_t* board_t;
 
-typedef __int16 MASK;
-typedef __int16 CANDIDATES;
-typedef __int8* BOARDS;
+typedef __int16 mask_t;
+typedef __int16 candidates_t;
+typedef board_t boards_t;
 
 #endif

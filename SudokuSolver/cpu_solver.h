@@ -3,13 +3,13 @@
 
 #include "sudoku.h"
 
-typedef char FLAG;
+typedef char flag_t;
 typedef struct {
-	FLAG progress;
-	FLAG success;
-	FLAG error;
-} FLAGS;
+	flag_t progress;
+	flag_t success;
+	flag_t error;
+} flags_t;
 
-void solve_cpu(BOARD, BOARD);
+void solve_cpu(board_t, board_t);
 
 #endif

@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "sudoku.h"
 
-int load_board(char* filename, BOARD board);
-void print_board(FILE* file, BOARD board);
+int load_board(char* filename, board_t board);
+void print_board(FILE* file, board_t board);
 
 #endif
