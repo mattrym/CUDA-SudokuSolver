@@ -21,7 +21,7 @@ void measure_time(void(solve_fun)(BOARD, BOARD), BOARD input_board, BOARD output
 	elapsed_time = (end.QuadPart - start.QuadPart) * 1000.0 / freq.QuadPart;
 
 	print_board(stdout, output_board);
-	printf("\nTime: %.7g us\n", elapsed_time);
+	printf("\nTime: %.7g ms\n", elapsed_time);
 }
 
 int main(int argc, char* argv[])

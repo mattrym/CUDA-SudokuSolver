@@ -254,6 +254,8 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 	BLOCK_STATUS last_block_status;
 
 	int it;
+	float elapsed_time, total_elapsed_time;
+	cudaEvent_t t_start, t_stop;
 
 	CUDA_SAFE(cudaSetDevice(0));
 
@@ -263,22 +265,39 @@ void solve_gpu(const BOARD input_board, BOARD output_board)
 	CUDA_SAFE(cudaMalloc((void**)&boards, (BLOCKS + 1) * BOARD_SIZE * sizeof(CELL)));
 	CUDA_SAFE(cudaMemcpy(boards, input_board, BOARD_SIZE * sizeof(CELL), cudaMemcpyHostToDevice));
 
+	CUDA_SAFE(cudaEventCreate(&t_start));
+	CUDA_SAFE(cudaEventCreate(&t_stop));
+
+	total_elapsed_time = 0;
+
 	for (it = 0; it < ITERATIONS; ++it)
 	{
+		CUDA_SAFE(cudaEventRecord(t_start, 0));
+
 		solve_kernel<<<BLOCKS, THREADS>>>(boards, block_status);
-		CUDA_SAFE(cudaGetLastError());
-		CUDA_SAFE(cudaDeviceSynchronize());
+
+		CUDA_SAFE(cudaEventRecord(t_stop, 0));
+		CUDA_SAFE(cudaEventSynchronize(t_stop));
+		CUDA_SAFE(cudaEventElapsedTime(&elapsed_time, t_start, t_stop));
+
+		total_elapsed_time += elapsed_time;
 
 		CUDA_SAFE(cudaMemcpy(&last_block_status, block_status + BLOCKS, sizeof(BLOCK_STATUS), cudaMemcpyDeviceToHost));
 		if (last_block_status == SUCCESS)
 		{
-			CUDA_SAFE(cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(CELL), cudaMemcpyDeviceToHost));
 			break;
 		}
 	}
 
-	cudaFree(boards);
-	cudaFree(block_status);
+	printf("CUDA time: %.4f ms\n", elapsed_time);
+
+	CUDA_SAFE(cudaMemcpy(output_board, boards + BLOCKS * BOARD_SIZE, BOARD_SIZE * sizeof(CELL), cudaMemcpyDeviceToHost));
+
+	CUDA_SAFE(cudaEventDestroy(t_start));
+	CUDA_SAFE(cudaEventDestroy(t_stop));
+
+	CUDA_SAFE(cudaFree(boards));
+	CUDA_SAFE(cudaFree(block_status));
 
 	CUDA_SAFE(cudaDeviceReset());
 }
